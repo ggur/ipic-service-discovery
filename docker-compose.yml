@@ -1,0 +1,39 @@
+
+services:
+  eureka-server:
+    image: eureka-server:0.0.1
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - my-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+  ipic:
+    image: ipic:0.0.1
+    container_name: ipic
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - my-network
+  gateway:
+    image: gateway-app:0.0.1
+    container_name: gateway-app
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge
