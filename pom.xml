@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>com.nzys</groupId>
 	<artifactId>ipic-service-discovery</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>ipic-service-discovery</name>
 	<description>Eureka server</description>
 	<url />
