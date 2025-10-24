@@ -1,63 +1,73 @@
 pipeline {
-  agent any                     // run on any available agent
-  environment {
-    MAVEN_OPTS = "-Xmx1024m"
-    DOCKER_REGISTRY = "myregistry.example.com" // optional
-  }
-  options {
-    timestamps()
-    ansiColor('xterm')
-    buildDiscarder(logRotator(daysToKeepStr: '14', numToKeepStr: '10'))
-  }
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    agent any  // This defines the agent where the pipeline will run. 'any' means it can run on any available agent.
+
+    environment {
+        DOCKER_IMAGE = 'service-discovery:latest'  // Define the Docker image name
+        DOCKER_REGISTRY = 'docker.io'  // Define the Docker registry (Docker Hub by default)
+        DOCKER_USER = 'cgurugc@gmail.com'  // Docker Hub username (or another registry)
+        // DOCKER_PASS is now handled by withCredentials
     }
 
-    stage('Build') {
-      when { expression { fileExists('pom.xml') } } // Maven example
-      steps {
-        sh 'mvn -B clean package'   // use bat 'mvn -B ...' on Windows agents
-        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-      }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                // Checkout the code from Git repository
+                git credentialsId: 'github-token', url: 'https://github.com/ggur/ipic-service-discovery.git', branch: 'main'
+            }
+        }
+		
+		
+
+
+        stage('Build with Maven') {
+            steps {
+                script {
+                    // Run Maven to clean and build the project
+                    sh 'mvn clean package'  // This will clean and build your Maven project
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build Docker image from the Dockerfile
+                    sh "docker build -t $DOCKER_IMAGE ."
+                }
+            }
+        }
+
+        stage('Login and Push Docker Image') {
+            steps {
+                // Use withCredentials for secure handling of the Docker password
+                // 'docker-creds' should be a 'Secret text' credential in Jenkins
+                withCredentials([string(credentialsId: 'docker-creds', variable: 'DOCKER_PASS')]) {
+                    script {
+                        echo 'Logging in to Docker Hub...'
+                        sh "echo \$DOCKER_PASS | docker login -u '${DOCKER_USER}' --password-stdin ${DOCKER_REGISTRY}"
+                        echo 'Pushing Docker image...'
+                        sh "docker push ${DOCKER_IMAGE}"
+                    }
+                } // Credentials are automatically revoked here
+            }
+        }
+
+        stage('Deploy to Docker') {
+            steps {
+                script {
+                    // Run the Docker container from the image
+                    sh "docker run -d -p 8761:8761 --name myapp $DOCKER_IMAGE"
+                }
+            }
+        }
     }
 
-    stage('Unit Tests') {
-      steps {
-        sh 'mvn test'
-        junit 'target/surefire-reports/*.xml'
-      }
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
     }
-
-    stage('Docker Build & Push') {
-      when { expression { fileExists('Dockerfile') } }
-      environment {
-        REGISTRY_CREDENTIALS = credentials('docker-registry-id') // credential id
-      }
-      steps {
-        sh '''
-          docker build -t $DOCKER_REGISTRY/myapp:${BUILD_NUMBER} .
-          echo "$REGISTRY_CREDENTIALS_PSW" | docker login -u "$REGISTRY_CREDENTIALS_USR" --password-stdin $DOCKER_REGISTRY
-          docker push $DOCKER_REGISTRY/myapp:${BUILD_NUMBER}
-        '''
-      }
-    }
-
-    stage('Deploy (dev)') {
-      when { branch 'main' }
-      steps {
-        echo "Deploying to dev environment..."
-        // add your deploy steps, e.g. kubectl, ssh, etc.
-      }
-    }
-  }
-
-  post {
-    success { echo "Build succeeded: ${env.BUILD_URL}" }
-    unstable { echo "Build unstable" }
-    failure { mail to: 'team@example.com', subject: "Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}", body: "See ${env.BUILD_URL}" }
-    always { cleanWs() }
-  }
 }
