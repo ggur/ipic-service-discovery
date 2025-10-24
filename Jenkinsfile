@@ -2,7 +2,7 @@ pipeline {
     agent any  // This defines the agent where the pipeline will run. 'any' means it can run on any available agent.
 
     environment {
-        DOCKER_IMAGE = 'service-discovery:latest'  // Define the Docker image name
+        DOCKER_IMAGE = 'cgurugc/service-discovery:latest'  // Define the Docker image name with username
         DOCKER_REGISTRY = 'docker.io'  // Define the Docker registry (Docker Hub by default)
         DOCKER_USER = 'cgurugc@gmail.com'  // Docker Hub username (or another registry)
         // DOCKER_PASS is now handled by withCredentials
