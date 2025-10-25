@@ -44,8 +44,8 @@ pipeline {
                 // Use withCredentials for secure handling of the Docker password
                 // 'docker-creds' should be a 'Secret text' credential in Jenkins
                 withCredentials([string(credentialsId: 'docker-creds', variable: 'DOCKER_PASS')]) {
-                    def imageTag = "build-${env.BUILD_NUMBER}"
                     script {
+                        def imageTag = "build-${env.BUILD_NUMBER}"
                         echo 'Logging in to Docker Hub...'
                         sh "echo \$DOCKER_PASS | docker login -u '${DOCKER_USER}' --password-stdin ${DOCKER_REGISTRY}"
                         echo 'Pushing Docker image...'
