@@ -59,7 +59,7 @@ pipeline {
                 script {
                     echo "Linting Helm chart..."
                     // This validates the syntax of your Helm chart before deployment
-                    sh "helm lint ./helm"
+                    sh "helm lint helm/ipic-service-discovery"
                 }
             }
         }
@@ -72,7 +72,7 @@ pipeline {
                         echo "Deploying Helm chart for image ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
                         // Use 'helm upgrade --install' to either install or update the release
                         // We set the image tag dynamically from our build
-                        sh """helm upgrade --install ${HELM_RELEASE_NAME} ./helm \
+                        sh """helm upgrade --install ${HELM_RELEASE_NAME} helm/ipic-service-discovery \
                               --set image.tag=${IMAGE_TAG}"""
                     }
                 }
