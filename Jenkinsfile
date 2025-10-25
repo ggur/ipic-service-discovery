@@ -14,7 +14,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 // Checkout the code from Git repository
-                git credentialsId: 'pipeline-creds', url: 'https://github.com/ggur/ipic-service-discovery.git', branch: 'main'
+                git credentialsId: 'github-token', url: 'https://github.com/ggur/ipic-service-discovery.git', branch: 'main'
             }
         }
 		
