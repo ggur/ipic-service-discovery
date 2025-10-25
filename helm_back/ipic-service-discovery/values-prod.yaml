@@ -1,0 +1,27 @@
+# Helm values for the PRODUCTION environment
+
+replicaCount: 3 # Increase replicas for high availability
+
+image:
+  repository: your-prod-docker-repo/left-food-api # It's good practice to use a dedicated prod repo
+  tag: "1.0.0" # Use a specific, stable version tag for production
+
+config:
+  # Point to the production database and Keycloak instances
+  databaseUrl: "jdbc:postgresql://prod-postgres.example.com:5432/leftfood_prod_db"
+  jwtIssuerUri: "https://auth.example.com/realms/my-app-realm"
+
+# IMPORTANT: Production secrets should be managed securely.
+# The password is left blank here to force an override during deployment.
+secrets:
+  databaseUser: "prod_db_user"
+  databasePassword: "" # This MUST be provided at deploy time via --set or a secrets manager
+
+# Higher resource allocation for production workloads
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi

@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "ipic-service-discovery.name" -}}
+{{- define "left-food-api.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "ipic-service-discovery.fullname" -}}
+{{- define "left-food-api.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,18 +24,28 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart labels
+Create chart name and version as used by the chart label.
 */}}
-{{- define "ipic-service-discovery.labels" -}}
-helm.sh/chart: {{ include "ipic-service-discovery.name" . }}-{{ .Chart.Version }}
-{{ include "ipic-service-discovery.selectorLabels" . }}
+{{- define "left-food-api.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "left-food-api.labels" -}}
+helm.sh/chart: {{ include "left-food-api.chart" . }}
+{{ include "left-food-api.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
 Selector labels
 */}}
-{{- define "ipic-service-discovery.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ipic-service-discovery.name" . }}
+{{- define "left-food-api.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "left-food-api.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

@@ -1,45 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "left-food-api.fullname" . }}
+  name: {{ include "ipic-service-discovery.fullname" . }}
+  labels:
+    {{- include "ipic-service-discovery.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.replicaCount | default 1 }}
   selector:
     matchLabels:
-      {{- include "left-food-api.selectorLabels" . | nindent 6 }}
+      {{- include "ipic-service-discovery.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "left-food-api.selectorLabels" . | nindent 8 }}
+        {{- include "ipic-service-discovery.selectorLabels" . | nindent 8 }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.appVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.targetPort }}
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
-          {{- if .Values.probes.liveness.enabled }}
-          livenessProbe:
-            httpGet:
-              path: {{ .Values.probes.liveness.path }}
-              port: http
-            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
-          {{- end }}
-          {{- if .Values.probes.readiness.enabled }}
-          readinessProbe:
-            httpGet:
-              path: {{ .Values.probes.readiness.path }}
-              port: http
-            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
-          {{- end }}
-          envFrom:
-            - configMapRef:
-                name: {{ include "left-food-api.fullname" . }}-config
-            - secretRef:
-                name: {{ include "left-food-api.fullname" . }}-secret
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}

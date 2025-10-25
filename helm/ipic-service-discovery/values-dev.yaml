@@ -1,15 +1,3 @@
 # Helm values for the DEVELOPMENT environment
 
-replicaCount: 1
-
-image:
-  tag: "latest" # Use the latest image for development
-
-# For dev, we can rely on the default secrets from the main values.yaml
-# which are suitable for a local or shared dev setup.
-
-# Lower resource allocation for dev
-resources:
-  requests:
-    cpu: 100m
-    memory: 256Mi
+replicaCount: 1 # A single replica is sufficient for development
