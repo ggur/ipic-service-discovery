@@ -67,7 +67,7 @@ pipeline {
         stage('Deploy with Helm') {
             steps {
                 // Use withKubeconfig to securely provide cluster credentials
-                withKubeconfig([credentialsId: 'kube-config-docker-desktop']) {
+                withKubeConfig([credentialsId: 'kube-config-docker-desktop']) {
                     script {
                         echo "Deploying Helm chart for image ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
                         // Use 'helm upgrade --install' to either install or update the release
