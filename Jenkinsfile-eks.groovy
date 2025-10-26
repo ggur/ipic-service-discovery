@@ -7,11 +7,14 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE_NAME = 'cgurugc/service-discovery'
-        DOCKER_REGISTRY = 'docker.io'  // Define the Docker registry (Docker Hub by default)
-        DOCKER_USER = 'cgurugc@gmail.com'  // Docker Hub username (or another registry)
+        // AWS & EKS Configuration - Replace placeholders with your actual values
+        AWS_ACCOUNT_ID    = '440744252423' // <-- REPLACE with your AWS Account ID
+        AWS_REGION        = 'us-east-2'    // <-- REPLACE with your AWS region
+        EKS_CLUSTER_NAME  = 'my-eks-cluster' // <-- REPLACE with your EKS cluster name
+        ECR_REPOSITORY    = 'ipic-service-discovery'
+        ECR_REGISTRY      = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        DOCKER_IMAGE_NAME = "${ECR_REGISTRY}/${ECR_REPOSITORY}"
         HELM_RELEASE_NAME = 'ipic-service-discovery' // The name for our Helm deployment
-        // DOCKER_PASS is now handled by withCredentials
         IMAGE_TAG = "build-${env.BUILD_NUMBER}" // Define the image tag once for all stages
     }
 
@@ -45,17 +48,17 @@ pipeline {
         }
 
         stage('Login and Push Docker Image') {
+            // This stage uses AWS credentials to log in to Amazon ECR and push the image.
+            // 'aws-credentials' should be a Jenkins credential of type 'AWS Credentials'.
             steps {
-                // Use withCredentials for secure handling of the Docker password
-                // 'docker-creds' should be a 'Secret text' credential in Jenkins
-                withCredentials([string(credentialsId: 'docker-creds', variable: 'DOCKER_PASS')]) {
+                withAWS(credentials: 'aws-credentials', region: AWS_REGION) {
                     script {
-                        echo 'Logging in to Docker Hub...'
-                        sh "echo \$DOCKER_PASS | docker login -u '${DOCKER_USER}' --password-stdin ${DOCKER_REGISTRY}"
+                        echo "Logging in to Amazon ECR..."
+                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}"
                         echo 'Pushing Docker image...'
                         sh "docker push ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
                     }
-                } // Credentials are automatically revoked here
+                }
             }
         }
 
@@ -71,21 +74,19 @@ pipeline {
 
         stage('Deploy with Helm') {
             steps {
-                // Use withKubeconfig to securely provide cluster credentials
-                withKubeConfig([credentialsId: 'kube-config-docker-desktop']) {
+                // Use AWS credentials to configure kubectl for the EKS cluster
+                withAWS(credentials: 'aws-credentials', region: AWS_REGION) {
                     script {
-                        def valuesFile = "./helm/ipic-service-discovery/values-${params.ENVIRONMENT}.yaml"
-                        if (fileExists(valuesFile)) {
-                            echo "Deploying Helm chart for '${params.ENVIRONMENT}' environment..."
-                            echo "Using values file: ${valuesFile}"
-                            // Use 'helm upgrade --install' to either install or update the release
-                            // We set the image tag and use the -f flag to specify the environment-specific values file
-                            sh """helm upgrade --install ${HELM_RELEASE_NAME} helm/ipic-service-discovery \
-                                  --set image.repository=${DOCKER_IMAGE_NAME},image.tag=${IMAGE_TAG} \
-                                  -f ${valuesFile}"""
-                        } else {
-                            error("Deployment failed: Values file not found for environment '${params.ENVIRONMENT}' at ${valuesFile}")
-                        }
+                        echo "Configuring kubectl for EKS cluster '${EKS_CLUSTER_NAME}'..."
+                        sh "aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME} --region ${AWS_REGION}"
+
+                        echo "Deploying Helm chart for image ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
+                        // Use 'helm upgrade --install' to either install or update the release
+                        // We set the image tag dynamically from our build
+                        // Use the -f flag to specify the environment-specific values file
+                        sh """helm upgrade --install ${HELM_RELEASE_NAME} ./helm/ipic-service-discovery \
+                              --set image.repository=${DOCKER_IMAGE_NAME},image.tag=${IMAGE_TAG} \
+                              -f ./helm/ipic-service-discovery/values-${params.ENVIRONMENT}.yaml"""
                     }
                 }
             }

@@ -1,11 +1,6 @@
 pipeline {
     agent any  // This defines the agent where the pipeline will run. 'any' means it can run on any available agent.
 
-    parameters {
-        // Add a parameter to choose the deployment environment
-        choice(name: 'ENVIRONMENT', choices: ['dev', 'prod'], description: 'Select the environment to deploy to')
-    }
-
     environment {
         DOCKER_IMAGE_NAME = 'cgurugc/service-discovery'
         DOCKER_REGISTRY = 'docker.io'  // Define the Docker registry (Docker Hub by default)
@@ -74,18 +69,11 @@ pipeline {
                 // Use withKubeconfig to securely provide cluster credentials
                 withKubeConfig([credentialsId: 'kube-config-docker-desktop']) {
                     script {
-                        def valuesFile = "./helm/ipic-service-discovery/values-${params.ENVIRONMENT}.yaml"
-                        if (fileExists(valuesFile)) {
-                            echo "Deploying Helm chart for '${params.ENVIRONMENT}' environment..."
-                            echo "Using values file: ${valuesFile}"
-                            // Use 'helm upgrade --install' to either install or update the release
-                            // We set the image tag and use the -f flag to specify the environment-specific values file
-                            sh """helm upgrade --install ${HELM_RELEASE_NAME} helm/ipic-service-discovery \
-                                  --set image.repository=${DOCKER_IMAGE_NAME},image.tag=${IMAGE_TAG} \
-                                  -f ${valuesFile}"""
-                        } else {
-                            error("Deployment failed: Values file not found for environment '${params.ENVIRONMENT}' at ${valuesFile}")
-                        }
+                        echo "Deploying Helm chart for image ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
+                        // Use 'helm upgrade --install' to either install or update the release
+                        // We set the image tag dynamically from our build
+                        sh """helm upgrade --install ${HELM_RELEASE_NAME} helm/ipic-service-discovery \
+                              --set image.tag=${IMAGE_TAG}"""
                     }
                 }
             }
